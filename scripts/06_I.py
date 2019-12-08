@@ -54,20 +54,27 @@ What is the total number of direct and indirect orbits in your map data?
 import sys
 import anytree
 
-def calculate_depth(universe, planet='COM', depth=0):
-    # print('{}>{}({})'.format('--' * depth, planet, depth), end='\n')
+GLOBAL_PATH = {}
 
-    if planet not in universe:
+def calculate_depth(universe, root_planet='COM', depth=0, path=[]):
+    # print('{}>{}({})'.format(depth, root_planet, depth), end='\n')
+    path.append(root_planet)
+    if root_planet in ('YOU', 'SAN'):
+        GLOBAL_PATH[root_planet] = path.copy()
+        print('Path', path)
+        
+    if root_planet not in universe:
+        path.pop()
         return 0, depth
 
     cur_indirect_orbits = depth
-    cur_direct_orbits = len(universe[planet])
-    for planet in universe[planet]:
-        planet_direct_orbits, planet_indirect_orbits = calculate_depth(universe, planet, depth + 1)
+    cur_direct_orbits = len(universe[root_planet])
+    for planet in universe[root_planet]:
+        planet_direct_orbits, planet_indirect_orbits = calculate_depth(universe, planet, depth + 1, path)
         cur_direct_orbits += planet_direct_orbits
         cur_indirect_orbits += planet_indirect_orbits
     
-    # print('Steps', cur_direct_orbits, cur_indirect_orbits)
+    path.pop()
     return cur_direct_orbits, cur_indirect_orbits
 
 def assembly_universe(orbits):
@@ -76,7 +83,7 @@ def assembly_universe(orbits):
         if source not in universe.keys():
             universe[source] = []
         universe[source].append(ring)
-    print('Universe', universe)
+    # print('Universe', universe)
     return universe
     
 
@@ -91,6 +98,18 @@ def parse_file(file_path : str):
 def main(argv):
     center_of_mass = 'COM'
     print(calculate_depth(assembly_universe(parse_file(argv[1])), center_of_mass))
+    
+    step = 0
+    idx = 0
+    while GLOBAL_PATH['YOU'][idx] == GLOBAL_PATH['SAN'][idx]: idx += 1
+    print('idx={} YOUdepth={} SANdepth={} diff_you={} diff_san={} diff_you_san={}'.format(
+            idx, 
+            len(GLOBAL_PATH['YOU']), 
+            len(GLOBAL_PATH['SAN']), 
+            len(GLOBAL_PATH['YOU']) - idx, 
+            len(GLOBAL_PATH['SAN']) - idx,
+            len(GLOBAL_PATH['YOU']) - idx + len(GLOBAL_PATH['SAN']) - idx))
+        
     
 
     
