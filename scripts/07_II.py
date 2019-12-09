@@ -242,7 +242,7 @@ class SignalQueue:
         self.__queue.extend(queue)
         self.__name = name
         
-        print('SQ_{}:{}'.format(self.__name, self.__queue), end='\n')
+        # print('SQ_{}:{}'.format(self.__name, self.__queue), end='\n')
         
     
     def __call__(self, message, **args):
