@@ -74,7 +74,7 @@ class Virtual_Machine:
 
     def print_debug_info(self):
         self.__debug('')
-        self.__debug(' IntCode\n {}'.format(self.__int_code))
+        self.__debug('  IntCode: \n{}'.format(self.__int_code))
         self.__debug('Is Running {}'.format(self.__is_running))
         self.__debug('        PC {}'.format(self.__pc))
         self.__debug('   LAST PC {}'.format(self.__last_pc))
@@ -234,63 +234,81 @@ def parse_file(file_path : str):
 
 class SignalQueue: 
     g_move = False
+    g_counter = 0
+    g_max = 0
     
-    def __init__(self):
+    def __init__(self, queue=[], name=''):
         self.__queue = []
+        self.__queue.extend(queue)
+        self.__name = name
+        
+        print('SQ_{}:{}'.format(self.__name, self.__queue), end='\n')
+        
     
     def __call__(self, message, **args):
-        print(message)
-        self.__queue.append(int(message)) 
-        g_move = True
+        # print('SQ_{}:{}'.format(self.__name, message), end='\n')
+        self.__queue.insert(0, int(message))
+        SignalQueue.g_move = True
+        SignalQueue.g_max = max(SignalQueue.g_max, int(message))
 
         
     def get_queue(self):
         return self.__queue
     
 def create_amp(int_code, sq, input, name):
-    return Virtual_Machine(int_code, debug=True, output_callback=sq, input=input, machine_name=name)
+    return Virtual_Machine(int_code, debug=False, output_callback=sq, input=input, machine_name=name)
     
 
 def main(argv):
     max_output = 0
     max_permuatation = []
 
-    g_queue.append(0)
+    # g_queue.append(0)
     
     buffer = []
     for permutation in permutations(range(5, 9 + 1)):
         debug_on = False
         
         signal_queues = []
-        for amp_num in range(5):
-            signal_queues.append(SignalQueue())
+        # queue_permutation = list(permutation)
+        queue_permutation = list(permutation)
+        for phase in queue_permutation:
+            signal_queues.append(SignalQueue([phase], phase))
+        
+        # for sq in signal_queues:
+            # sq(queue_permutation.pop())
+ 
+        signal_queues[0].get_queue().insert(0, 0)
+        SignalQueue.g_move = False
             
         amps = []
         for amp_num in range(5):
             amps.append(create_amp(
                     parse_file(argv[1]), 
-                    signal_queues[amp_num],  
-                    signal_queues[amp_num - 1].get_queue(),
+                    signal_queues[(amp_num + 1) % len(signal_queues)],  
+                    signal_queues[amp_num].get_queue(),
                     'Amp_{:02}'.format(amp_num)))
-        
-        signal_queues[-1].get_queue().extend(list(permutation))
-        
-        is_running = True     
-        while is_running:
-            for amp in cycle(amps):
-                while True:
-                    try: amp.step()
-                    except Exception as e:
-                        print('E: {}\n{}'.format(e, amp.print_debug_info()))
-                        raise
-                    is_running = is_running and amp.is_running()
-                    
-                    if SignalQueue.g_move:
-                        SignalQueue.g_move = False
-                        break
-        print('--------------')
+
+        for amp in cycle(amps):
+            if all([not t_amp.is_running() for t_amp in amps]):
+                break
+            while amp.is_running():
+                try: 
+                    amp.step()
+                except Exception as e:
+                    print('E: {}\n{}'.format(e, amp.print_debug_info()))
+                    raise
             
-    print('Max_output={}, last_output={}'.format(max_output, g_queue))
+                if SignalQueue.g_move:
+                    SignalQueue.g_move = False
+                    # [print(sq.get_queue()) for sq in signal_queues]
+                    break
+           
+            
+            # if signal_queues[-1].get_queue():
+                # max_output = max(max_output, signal_queues[-1].get_queue()[-1])
+        
+    print('Max_output={}'.format(SignalQueue.g_max))
         
 
 if __name__ == "__main__":
