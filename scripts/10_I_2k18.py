@@ -116,7 +116,7 @@ def main(argv):
     screen.fill(background_colour)
     pg.display.flip()
     running = True
-git 
+
     ss.elapse(3)
     printout = ss.print()
 
