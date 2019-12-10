@@ -44,6 +44,7 @@ import sys
 from collections import deque
 from itertools import permutations
 
+
 class Virtual_Machine:
 
     def __init__(self, int_code, program_alarm=False, noun=12, verb=2, debug=False, output_callback=print, input=[]):
@@ -99,19 +100,19 @@ class Virtual_Machine:
         opcode = self.__int_code[self.__pc] % 100
         self.__debug('O({})'.format(opcode))
         return {
-            1  : self.__add,
-            2  : self.__multiple,
+            1: self.__add,
+            2: self.__multiple,
 
-            3  : self.__input,
-            4  : self.__print,
+            3: self.__input,
+            4: self.__print,
 
-            5  : self.__jmp_if_true,
-            6  : self.__jmp_if_false,
+            5: self.__jmp_if_true,
+            6: self.__jmp_if_false,
 
-            7  : self.__less_than,
-            8  : self.__equals,
+            7: self.__less_than,
+            8: self.__equals,
 
-            99 : self.__exit
+            99: self.__exit
         }[opcode]()
 
     def __add(self):
@@ -135,7 +136,7 @@ class Virtual_Machine:
 
         self.__debug('ReadVal={} Buffer={}'.format(val, self.__pipe_input))
         # if not (0 <= val <= 99):
-            # raise Exception('Passed value \'{}\' is not in range [{}, {}]', val, 0, 99)
+        # raise Exception('Passed value \'{}\' is not in range [{}, {}]', val, 0, 99)
 
         self.__write_arg(val)
         return 1
@@ -216,17 +217,21 @@ class Virtual_Machine:
 
 # TODO(HalfsInner): improve desing of this CB
 g_queue = []
+
+
 def cb_get(message, **args):
     # print(message)
     g_queue.append(int(message))
 
-def parse_file(file_path : str):
+
+def parse_file(file_path: str):
     int_code = []
     with open(file_path, 'r') as f:
         for line in f:
             int_code.extend(map(int, line.replace('\n', '').replace('\r', '').split(',')))
 
     return int_code
+
 
 def main(argv):
     max_output = 0
@@ -241,16 +246,18 @@ def main(argv):
                 buffer.insert(0, 0)
             vm = Virtual_Machine(parse_file(argv[1]), debug=False, output_callback=cb_get, input=buffer)
             while (vm.is_running()):
-                try: vm.step()
+                try:
+                    vm.step()
                 except Exception as e:
                     print('E: {}\n{}'.format(e, vm.print_debug_info()))
                     raise
-            
+
             max_output = max(max_output, g_queue[-1])
             # print('Output?', vm.first_position())
         # print('Permutation: ', list(permutation))
         # break
     print('First Position Value = {}, max_output={}'.format(vm.first_position(), max_output))
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

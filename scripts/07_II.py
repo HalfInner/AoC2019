@@ -37,9 +37,11 @@ import sys
 from collections import deque
 from itertools import permutations, cycle
 
+
 class Virtual_Machine:
 
-    def __init__(self, int_code, program_alarm=False, noun=12, verb=2, debug=False, output_callback=print, input=[], machine_name=''):
+    def __init__(self, int_code, program_alarm=False, noun=12, verb=2, debug=False, output_callback=print, input=[],
+                 machine_name=''):
         self.__debug_mode = debug
         self.__machine_name = machine_name
         self.__debug('Debug Mode... ')
@@ -93,19 +95,19 @@ class Virtual_Machine:
         opcode = self.__int_code[self.__pc] % 100
         self.__debug('O({})'.format(opcode))
         return {
-            1  : self.__add,
-            2  : self.__multiple,
+            1: self.__add,
+            2: self.__multiple,
 
-            3  : self.__input,
-            4  : self.__print,
+            3: self.__input,
+            4: self.__print,
 
-            5  : self.__jmp_if_true,
-            6  : self.__jmp_if_false,
+            5: self.__jmp_if_true,
+            6: self.__jmp_if_false,
 
-            7  : self.__less_than,
-            8  : self.__equals,
+            7: self.__less_than,
+            8: self.__equals,
 
-            99 : self.__exit
+            99: self.__exit
         }[opcode]()
 
     def __add(self):
@@ -130,7 +132,7 @@ class Virtual_Machine:
 
         self.__debug('ReadVal={} Buffer={}'.format(val, self.__pipe_input))
         # if not (0 <= val <= 99):
-            # raise Exception('Passed value \'{}\' is not in range [{}, {}]', val, 0, 99)
+        # raise Exception('Passed value \'{}\' is not in range [{}, {}]', val, 0, 99)
 
         self.__write_arg(val)
         return 1
@@ -211,11 +213,14 @@ class Virtual_Machine:
 
 # TODO(HalfsInner): improve desing of this CB
 g_queue = []
+
+
 def cb_get(message, **args):
     print(message)
     g_queue.append(int(message))
 
-def parse_file(file_path : str):
+
+def parse_file(file_path: str):
     int_code = []
     with open(file_path, 'r') as f:
         for line in f:
@@ -223,93 +228,92 @@ def parse_file(file_path : str):
 
     return int_code
 
-def parse_file(file_path : str):
+
+def parse_file(file_path: str):
     int_code = []
     with open(file_path, 'r') as f:
         for line in f:
             int_code.extend(map(int, line.replace('\n', '').replace('\r', '').split(',')))
 
     return int_code
-    
 
-class SignalQueue: 
+
+class SignalQueue:
     g_move = False
     g_counter = 0
     g_max = 0
-    
+
     def __init__(self, queue=[], name=''):
         self.__queue = []
         self.__queue.extend(queue)
         self.__name = name
-        
+
         # print('SQ_{}:{}'.format(self.__name, self.__queue), end='\n')
-        
-    
+
     def __call__(self, message, **args):
         # print('SQ_{}:{}'.format(self.__name, message), end='\n')
         self.__queue.insert(0, int(message))
         SignalQueue.g_move = True
         SignalQueue.g_max = max(SignalQueue.g_max, int(message))
 
-        
     def get_queue(self):
         return self.__queue
-    
+
+
 def create_amp(int_code, sq, input, name):
     return Virtual_Machine(int_code, debug=False, output_callback=sq, input=input, machine_name=name)
-    
+
 
 def main(argv):
     max_output = 0
     max_permuatation = []
 
     # g_queue.append(0)
-    
+
     buffer = []
     for permutation in permutations(range(5, 9 + 1)):
         debug_on = False
-        
+
         signal_queues = []
         # queue_permutation = list(permutation)
         queue_permutation = list(permutation)
         for phase in queue_permutation:
             signal_queues.append(SignalQueue([phase], phase))
-        
+
         # for sq in signal_queues:
-            # sq(queue_permutation.pop())
- 
+        # sq(queue_permutation.pop())
+
         signal_queues[0].get_queue().insert(0, 0)
         SignalQueue.g_move = False
-            
+
         amps = []
         for amp_num in range(5):
             amps.append(create_amp(
-                    parse_file(argv[1]), 
-                    signal_queues[(amp_num + 1) % len(signal_queues)],  
-                    signal_queues[amp_num].get_queue(),
-                    'Amp_{:02}'.format(amp_num)))
+                parse_file(argv[1]),
+                signal_queues[(amp_num + 1) % len(signal_queues)],
+                signal_queues[amp_num].get_queue(),
+                'Amp_{:02}'.format(amp_num)))
 
         for amp in cycle(amps):
             if all([not t_amp.is_running() for t_amp in amps]):
                 break
             while amp.is_running():
-                try: 
+                try:
                     amp.step()
                 except Exception as e:
                     print('E: {}\n{}'.format(e, amp.print_debug_info()))
                     raise
-            
+
                 if SignalQueue.g_move:
                     SignalQueue.g_move = False
                     # [print(sq.get_queue()) for sq in signal_queues]
                     break
-           
-            
+
             # if signal_queues[-1].get_queue():
-                # max_output = max(max_output, signal_queues[-1].get_queue()[-1])
-        
+            # max_output = max(max_output, signal_queues[-1].get_queue()[-1])
+
     print('Max_output={}'.format(SignalQueue.g_max))
-        
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

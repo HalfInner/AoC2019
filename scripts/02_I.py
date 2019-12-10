@@ -48,8 +48,9 @@ Once you have a working computer, the first step is to restore the gravity assis
 
 import sys
 
+
 class Virtual_Machine:
-    
+
     def __init__(self, int_code, program_alarm=False):
         self.__int_code = int_code
         self.__is_running = True
@@ -57,61 +58,63 @@ class Virtual_Machine:
         if program_alarm:
             self.__int_code[1] = 12
             self.__int_code[2] = 2
-        
+
     def is_running(self):
         return self.__is_running
-        
+
     def step(self):
         self.__pc += self.__operate()
-        
+
     def first_position(self):
         first_pos = 0
         return self.__int_code[first_pos]
-        
+
     def __operate(self):
         return \
-        {  
-            1  : self.__add,
-            2  : self.__multiple,
-            99 : self.__exit 
-        }[self.__int_code[self.__pc]]()
-    
+            {
+                1: self.__add,
+                2: self.__multiple,
+                99: self.__exit
+            }[self.__int_code[self.__pc]]()
+
     def __add(self):
         arg1_pos = self.__int_code[self.__pc + 1]
         arg2_pos = self.__int_code[self.__pc + 2]
         out = self.__int_code[self.__pc + 3]
-        
+
         self.__int_code[out] = self.__int_code[arg1_pos] + self.__int_code[arg2_pos]
         return 4
-    
+
     def __multiple(self):
         arg1_pos = self.__int_code[self.__pc + 1]
         arg2_pos = self.__int_code[self.__pc + 2]
         out = self.__int_code[self.__pc + 3]
-        
+
         self.__int_code[out] = self.__int_code[arg1_pos] * self.__int_code[arg2_pos]
         return 4
-    
+
     def __exit(self):
         self.__is_running = False
         return 1
 
 
-def parse_file(file_path : str):
+def parse_file(file_path: str):
     int_code = []
     with open(file_path, 'r') as f:
         for line in f:
             int_code.extend(map(int, line.split(',')))
-    
+
     return int_code
+
 
 def main(argv):
     black_box_mode = True
     vm = Virtual_Machine(parse_file(argv[1]), black_box_mode)
     while (vm.is_running()):
         vm.step()
-        
-    print ('First Position Value = {}'.format(vm.first_position()))
+
+    print('First Position Value = {}'.format(vm.first_position()))
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

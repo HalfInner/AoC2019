@@ -99,24 +99,24 @@ Find the best location for a new monitoring station. How many other asteroids ca
 
 import sys
 import math
+from copy import deepcopy
 from itertools import islice, cycle
+from operator import setitem
 
-    
 
-def ray_trace_asteroids(asteroid_map, x_pos, y_pos):
+def ray_2pi_trace_asteroids(asteroid_map, x_pos, y_pos):
     if asteroid_map[y_pos][x_pos] != '#':
-        return -1, -1, -1
+        return -1, -1, -1, -1
         # raise Exception('Probe might be put only on asteroid')
-        
+
     x_len = len(asteroid_map[0])
     y_len = len(asteroid_map)
-     
-    is_in_range = lambda cur_x, cur_y: cur_x >= 0 and cur_y >=0 and cur_x < x_len and cur_y < y_len 
-    is_asteroid = lambda field : field != '.'
-    
+
+    is_in_range = lambda cur_x, cur_y: cur_x >= 0 and cur_y >= 0 and cur_x < x_len and cur_y < y_len
+    is_asteroid = lambda field: field != '.'
+
+    elements_2_pi = []
     asteroid_counter = 0
-    
-    
     # print('X|------------------------------------------')
     visited_points = {}
     for x_wall in range(x_pos + 1, x_len):
@@ -127,13 +127,14 @@ def ray_trace_asteroids(asteroid_map, x_pos, y_pos):
             if (cur_x, cur_y) in visited_points.keys():
                 continue
             is_found = False
-            while is_in_range(cur_x, cur_y):             
+            while is_in_range(cur_x, cur_y):
                 if is_asteroid(asteroid_map[cur_y][cur_x]) and not is_found:
                     is_found = True
                     # print('{};{}:{}'.format(cur_x, cur_y, asteroid_map[cur_y][cur_x], end=' '))
                     asteroid_counter += 1
-                visited_points[(cur_x, cur_y)] = True   
-                   
+                    elements_2_pi.append((cur_x, cur_y))
+                visited_points[(cur_x, cur_y)] = True
+
                 cur_x += vec[0] - x_pos
                 cur_y += vec[1] - y_pos
     # print('|X------------------------------------------')
@@ -145,38 +146,84 @@ def ray_trace_asteroids(asteroid_map, x_pos, y_pos):
             if (cur_x, cur_y) in visited_points.keys():
                 continue
             is_found = False
-            while is_in_range(cur_x, cur_y):             
+            while is_in_range(cur_x, cur_y):
                 if is_asteroid(asteroid_map[cur_y][cur_x]) and not is_found:
                     is_found = True
                     # print('{};{}:{}'.format(cur_x, cur_y, asteroid_map[cur_y][cur_x], end=' '))
                     asteroid_counter += 1
-                visited_points[(cur_x, cur_y)] = True   
-                
+                    elements_2_pi.append((cur_x, cur_y))
+                visited_points[(cur_x, cur_y)] = True
+
                 cur_x += vec[0] - x_pos
                 cur_y += vec[1] - y_pos
-                
+
     # print('^X^-----------------------------------------')
     cur_x, cur_y = x_pos, y_pos + 1
     while is_in_range(cur_x, cur_y):
         if is_asteroid(asteroid_map[cur_y][cur_x]):
-           # print('{};{}:{}'.format(cur_x, cur_y, asteroid_map[cur_y][cur_x], end=' '))
-           asteroid_counter += 1
-           break
+            # print('{};{}:{}'.format(cur_x, cur_y, asteroid_map[cur_y][cur_x], end=' '))
+            asteroid_counter += 1
+            elements_2_pi.append((cur_x, cur_y))
+            break
         cur_y += 1
-        
+
     # print('vXv-----------------------------------------')
     cur_x, cur_y = x_pos, y_pos - 1
     while is_in_range(cur_x, cur_y):
         if is_asteroid(asteroid_map[cur_y][cur_x]):
-           # print('{};{}:{}'.format(cur_x, cur_y, asteroid_map[cur_y][cur_x], end=' '))
-           asteroid_counter += 1
-           break
+            # print('{};{}:{}'.format(cur_x, cur_y, asteroid_map[cur_y][cur_x], end=' '))
+            asteroid_counter += 1
+            elements_2_pi.append((cur_x, cur_y))
+            break
         cur_y -= 1
-    
-    return x_pos, y_pos, asteroid_counter
+
+    return x_pos, y_pos, asteroid_counter, elements_2_pi
 
 
-def parse_file(file_path : str):
+def normalize_vector(x_pos, y_pos, vec):
+    return
+
+
+def clockwiseangle_and_distance(x_pos, y_pos):
+    def _clockwiseangle_and_distance(vec):
+        vector = (vec[0] - x_pos, vec[1] - y_pos)
+        # Length of vector: ||v||
+        lenvector = math.hypot(vector[0], vector[1])
+        # If length is zero there is no angle
+        if lenvector == 0:
+            return -math.pi, 0
+        # Normalize vector: v/||v||
+        normalized = [vector[0] / lenvector, vector[1] / lenvector]
+        # print(normalized)
+        refvec = (0, -1)
+        dotprod = normalized[0] * refvec[0] + normalized[1] * refvec[1]  # x1*x2 + y1*y2
+        diffprod = refvec[1] * normalized[0] - refvec[0] * normalized[1]  # x1*y2 - y1*x2
+        angle = -math.atan2(diffprod, dotprod)
+        # Negative angles represent counter-clockwise angles so we need to subtract them 
+        # from 2*pi (360 degrees)
+        if angle < 0:
+            return 2 * math.pi + angle, lenvector
+        # I return first the angle because that's the primary sorting criterium
+        # but if two vectors have the same angle then the shorter distance should come first.
+        return angle, lenvector
+
+    return _clockwiseangle_and_distance
+
+
+def vaporize(asteroid_map, x_pos, y_pos, number, initial_buffer=[]):
+    destroyed = 0
+    while destroyed < number:
+        # print('::', sorted(initial_buffer, key=clockwiseangle_and_distance(x_pos, y_pos)))
+        for vec in sorted(initial_buffer, key=clockwiseangle_and_distance(x_pos, y_pos)):
+            asteroid_map[vec[1]][vec[0]] = '.'
+            destroyed += 1
+            if destroyed == number:
+                print('{}th pos {}, answer={}'.format(number, vec, vec[0] * 100 + vec[1]))
+
+        _, _, _, initial_buffer = ray_2pi_trace_asteroids(asteroid_map, x_pos, y_pos)
+
+
+def parse_file(file_path: str):
     asteroid_map = []
     with open(file_path, 'r') as f:
         for line in f:
@@ -184,19 +231,25 @@ def parse_file(file_path : str):
                 [char for char in (line.replace('\r', '').replace('\n', ''))])
     return asteroid_map
 
+
 def main(argv):
     asteroid_map = parse_file(argv[1])
     x_best, y_best, max = -1, -1, -1
+    elements_2_pi = []
     for y in range(len(asteroid_map)):
         for x in range(len(asteroid_map[0])):
-            x_cur, y_cur, count_cur = ray_trace_asteroids(asteroid_map, x, y)
+            x_cur, y_cur, count_cur, cur_elements_2_pi = ray_2pi_trace_asteroids(asteroid_map, x, y)
             if max < count_cur:
                 max = count_cur
                 x_best = x_cur
                 y_best = y_cur
-            
+                elements_2_pi = cur_elements_2_pi
+
+    # vaporize(deepcopy(asteroid_map), x_best, y_best, 200, elements_2_pi)
+    [vaporize(deepcopy(asteroid_map), x_best, y_best, 347, elements_2_pi) for num in range(30)]
+
     print('The max asteroid you see is {} from pos {};{}'.format(max, x_best, y_best))
-    
-    
+
+
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

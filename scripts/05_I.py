@@ -50,13 +50,14 @@ After providing 1 to the only input instruction and passing all the tests, what 
 import sys
 from collections import deque
 
+
 class Virtual_Machine:
-    
+
     def __init__(self, int_code, program_alarm=False, noun=12, verb=2, debug=False):
         self.__debug_mode = debug
         if self.__debug_mode:
             print('Debug Mode...')
-        
+
         self.__int_code = int_code
         self.__is_running = True
         self.__pc = 0
@@ -66,20 +67,20 @@ class Virtual_Machine:
         if program_alarm:
             self.__int_code[1] = noun
             self.__int_code[2] = verb
-        
+
     def is_running(self):
         return self.__is_running
-        
+
     def step(self):
         self.__last_pc = self.__pc
         operate_length = self.__operate()
         self.__pc += operate_length
         self.__step_counter += 1
-        
+
     def first_position(self):
         first_pos = 0
         return self.__int_code[first_pos]
-        
+
     def print_debug_info(self):
         self.__debug('')
         self.__debug(' IntCode\n {}'.format(self.__int_code))
@@ -88,7 +89,7 @@ class Virtual_Machine:
         self.__debug('   LAST PC {}'.format(self.__last_pc))
         self.__debug('     Steps {}'.format(self.__step_counter))
         self.__debug(' arg modes {}'.format(self.__arg_mode_stack))
-        
+
     def __operate(self):
         opcode = self.__int_code[self.__pc] % 100
         self.__arg_mode_stack.clear()
@@ -96,31 +97,31 @@ class Virtual_Machine:
         for arg in range(3):
             arg_mode = modes % 10
             modes //= 10
-            self.__arg_mode_stack.appendleft(bool(arg_mode))   
-        
+            self.__arg_mode_stack.appendleft(bool(arg_mode))
+
         self.__debug('O({})'.format(opcode))
         return \
-        {  
-            1  : self.__add,
-            2  : self.__multiple,
-            3  : self.__input,
-            4  : self.__print,
-            99 : self.__exit 
-        }[opcode]()
-    
-    def __add(self):            
+            {
+                1: self.__add,
+                2: self.__multiple,
+                3: self.__input,
+                4: self.__print,
+                99: self.__exit
+            }[opcode]()
+
+    def __add(self):
         arg1 = self.__read_arg()
         arg2 = self.__read_arg()
         self.__write_arg(arg1 + arg2)
         return 1
-    
-    def __multiple(self):   
+
+    def __multiple(self):
         arg1 = self.__read_arg()
-        arg2 = self.__read_arg()        
+        arg2 = self.__read_arg()
         self.__write_arg(arg1 * arg2)
         return 1
 
-    def __input(self): 
+    def __input(self):
         val = 0
         try:
             val = int(input())
@@ -128,7 +129,7 @@ class Virtual_Machine:
             pass
         if not (0 <= val <= 99):
             raise Exception('Passed value \'{}\' is not in range [{}, {}]', val, 0, 99)
-            
+
         self.__write_arg(val)
         return 1
 
@@ -136,46 +137,48 @@ class Virtual_Machine:
         arg1 = self.__read_arg()
         print(arg1, end='')
         return 1
-    
+
     def __exit(self):
         self.__is_running = False
         return 1
-        
+
     # Helpers
     def __read_arg(self):
-        self.__pc += 1        
+        self.__pc += 1
         if self.__pc >= len(self.__int_code):
             raise Exception('Segmentation fault')
-        
+
         ret = 0
         if self.__arg_mode_stack.pop():
             ret = self.__int_code[self.__pc]
         else:
             ret = self.__int_code[self.__int_code[self.__pc]]
-            
-        return ret    
+
+        return ret
 
     def __write_arg(self, val):
         self.__pc += 1
         if self.__pc >= len(self.__int_code):
             raise Exception('Segmentation fault')
-        
+
         if self.__arg_mode_stack.pop():
             self.__int_code[self.__pc] = val
         else:
             self.__int_code[self.__int_code[self.__pc]] = val
-            
+
     def __debug(self, str):
         if self.__debug_mode:
             print('D:{}'.format(str))
 
-def parse_file(file_path : str):
+
+def parse_file(file_path: str):
     int_code = []
     with open(file_path, 'r') as f:
         for line in f:
             int_code.extend(map(int, line.replace('\n', '').split(',')))
-    
+
     return int_code
+
 
 def main(argv):
     vm = Virtual_Machine(parse_file(argv[1]), debug=True)
@@ -187,6 +190,6 @@ def main(argv):
     vm.print_debug_info()
     print('First Position Value = {}'.format(vm.first_position()))
 
+
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
-    

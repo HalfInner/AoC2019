@@ -39,6 +39,7 @@ What is the diagnostic code for system ID 5?
 import sys
 from collections import deque
 
+
 class Virtual_Machine:
 
     def __init__(self, int_code, program_alarm=False, noun=12, verb=2, debug=False):
@@ -88,21 +89,21 @@ class Virtual_Machine:
 
         self.__debug('O({})'.format(opcode))
         return \
-        {
-            1  : self.__add,
-            2  : self.__multiple,
+            {
+                1: self.__add,
+                2: self.__multiple,
 
-            3  : self.__input,
-            4  : self.__print,
+                3: self.__input,
+                4: self.__print,
 
-            5  : self.__jmp_if_true,
-            6  : self.__jmp_if_false,
+                5: self.__jmp_if_true,
+                6: self.__jmp_if_false,
 
-            7  : self.__less_than,
-            8  : self.__equals,
+                7: self.__less_than,
+                8: self.__equals,
 
-            99 : self.__exit
-        }[opcode]()
+                99: self.__exit
+            }[opcode]()
 
     def __add(self):
         arg1 = self.__read_arg()
@@ -202,13 +203,15 @@ class Virtual_Machine:
         if self.__debug_mode:
             print('D:{}'.format(str))
 
-def parse_file(file_path : str):
+
+def parse_file(file_path: str):
     int_code = []
     with open(file_path, 'r') as f:
         for line in f:
             int_code.extend(map(int, line.replace('\n', '').split(',')))
 
     return int_code
+
 
 def main(argv):
     vm = Virtual_Machine(parse_file(argv[1]), debug=False)
@@ -221,6 +224,6 @@ def main(argv):
     vm.print_debug_info()
     print('First Position Value = {}'.format(vm.first_position()))
 
+
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
-

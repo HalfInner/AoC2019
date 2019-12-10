@@ -23,19 +23,23 @@ What is the sum of the fuel requirements for all of the modules on your spacecra
 
 import sys
 
+
 def calculate_require_fuel(masses):
     return sum([mass // 3 - 2 for mass in masses])
 
-def parse_file(file_path : str):
+
+def parse_file(file_path: str):
     masses = []
     with open(file_path, 'r') as f:
         for line in f:
             masses.append(int(line))
-    
+
     return masses
+
 
 def main(argv):
     print('Required fuel is : {}'.format(calculate_require_fuel(parse_file(argv[1]))))
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

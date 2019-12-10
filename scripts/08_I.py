@@ -25,15 +25,17 @@ To make sure the image wasn't corrupted during transmission, the Elves would lik
 import sys
 import math
 
+
 def answer(layers, idx):
     ones = 0
     twos = 0
     for image_row in layers[idx]:
         ones += image_row.count('1')
         twos += image_row.count('2')
-        
+
     return ones * twos
-    
+
+
 def find_fewest_zeros_and_answer(layers):
     idx = float('inf')
     zeros = float('inf')
@@ -41,42 +43,45 @@ def find_fewest_zeros_and_answer(layers):
         layer_zeros = 0
         for row in layer:
             layer_zeros += row.count('0')
-        
+
         if layer_zeros < zeros:
             idx = current_idx
             zeros = layer_zeros
-        
+
     return idx
+
 
 def generate_layers(data, wide=25, tall=6):
     layers = []
-    idx = 0 
+    idx = 0
     img_idx = 0
     while idx < len(data):
         begin_pos = wide * tall * img_idx
-        end_pos =  wide * tall * (img_idx + 1)
-        layers.append([data[begin_pos : end_pos][row * wide : (row + 1) * wide] for row in range(tall)])
+        end_pos = wide * tall * (img_idx + 1)
+        layers.append([data[begin_pos: end_pos][row * wide: (row + 1) * wide] for row in range(tall)])
         img_idx += 1
         idx = end_pos
-        
-        #print('L{} : \n{}'.format(img_idx, layers[-1]))
-        #if idx > (25 * 6 + 1):
+
+        # print('L{} : \n{}'.format(img_idx, layers[-1]))
+        # if idx > (25 * 6 + 1):
         #    break
-     
+
     return layers
 
-def parse_file(file_path : str):
+
+def parse_file(file_path: str):
     data = []
     with open(file_path, 'r') as f:
         for line in f:
             data.extend(list(line))
     return data
 
+
 def main(argv):
     layers = generate_layers(parse_file(argv[1]))
     fewest_zeros_idx = find_fewest_zeros_and_answer(layers)
     print('Fewest Zeros in Layer {}, and answer is {}'.format(fewest_zeros_idx, answer(layers, fewest_zeros_idx)))
 
-    
+
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

@@ -32,11 +32,12 @@ What message is produced after decoding your image?
 
 import sys
 
+
 def squash(layers):
     image_out = []
     for x in range(len(layers[0][0])):
         image_out.append([2] * len(layers[0][0][0]))
-    
+
     to_continue = True
     for layer in layers:
         for image in layer:
@@ -47,32 +48,34 @@ def squash(layers):
 
     return image_out
 
+
 def generate_layers(data, wide=25, tall=6):
     layers = []
-    idx = 0 
+    idx = 0
     img_idx = 0
     while idx < len(data):
         begin_pos = wide * tall * img_idx
-        end_pos =  wide * tall * (img_idx + 1)
-        layers.append([[data[begin_pos : end_pos][row * wide : (row + 1) * wide] for row in range(tall)]])
+        end_pos = wide * tall * (img_idx + 1)
+        layers.append([[data[begin_pos: end_pos][row * wide: (row + 1) * wide] for row in range(tall)]])
         img_idx += 1
         idx = end_pos
-        
-     
+
     return layers
 
-def parse_file(file_path : str):
+
+def parse_file(file_path: str):
     data = []
     with open(file_path, 'r') as f:
         for line in f:
             data.extend(list(line))
     return data
 
+
 def main(argv):
     layers = generate_layers(parse_file(argv[1]), int(argv[2]), int(argv[3]))
     image = squash(layers)
     print('Image print is \n{}'.format('\n'.join([''.join([str(n) for n in row]).replace('0', ' ') for row in image])))
 
-    
+
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

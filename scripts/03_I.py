@@ -44,41 +44,44 @@ What is the Manhattan distance from the central port to the closest intersection
 import sys
 import math
 
+
 def create_point_path(wire_schema):
     start_point = (0, 0)
     start_length = 0
     route = {}
-    for step in wire_schema:            
+    for step in wire_schema:
         direction = step[0]
         length = int(step[1:])
         move = {
-            'R' : lambda p : (p[0] + 1, p[1]),
-            'L' : lambda p : (p[0] - 1, p[1]),
-            'U' : lambda p : (p[0], p[1] + 1),
-            'D' : lambda p : (p[0], p[1] - 1),
+            'R': lambda p: (p[0] + 1, p[1]),
+            'L': lambda p: (p[0] - 1, p[1]),
+            'U': lambda p: (p[0], p[1] + 1),
+            'D': lambda p: (p[0], p[1] - 1),
         }[direction]
         for s in range(length):
             start_point = move(start_point)
             if start_point not in route.keys():
                 route[start_point] = start_length + 1 + s
-    
+
     return route
+
 
 def find_closet_path(wires):
     wire1_path = create_point_path(wires[1])
     wire2_path = create_point_path(wires[2])
     cross_length = float('inf')
-    last_cross_coord = (0,0)
+    last_cross_coord = (0, 0)
     for w1_s in wire1_path.keys():
         if w1_s in wire2_path:
-            cross_length_prev = min(cross_length, math.sqrt(w1_s[0]**2 + w1_s[1]**2))
+            cross_length_prev = min(cross_length, math.sqrt(w1_s[0] ** 2 + w1_s[1] ** 2))
             if cross_length_prev != cross_length:
-                cross_length = cross_length_prev 
+                cross_length = cross_length_prev
                 last_cross_coord = w1_s
-    
+
     return abs(last_cross_coord[0]) + abs(last_cross_coord[1])
 
-def parse_file(file_path : str):
+
+def parse_file(file_path: str):
     wires = {}
     with open(file_path, 'r') as f:
         idx = 0
@@ -87,10 +90,11 @@ def parse_file(file_path : str):
             wires[idx] = line.split(',')
     return wires
 
+
 def main(argv):
     wires = parse_file(argv[1])
     print('Minimal cross path is {}'.format(find_closet_path(wires)))
 
-    
+
 if __name__ == "__main__":
     sys.exit(main(sys.argv))

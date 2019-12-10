@@ -51,9 +51,11 @@ from collections import deque
 from itertools import permutations, cycle
 from operator import setitem
 
+
 class Virtual_Machine:
 
-    def __init__(self, int_code, program_alarm=False, noun=12, verb=2, debug=False, output_callback=print, input=[], machine_name=''):
+    def __init__(self, int_code, program_alarm=False, noun=12, verb=2, debug=False, output_callback=print, input=[],
+                 machine_name=''):
         self.__debug_mode = debug
         self.__machine_name = machine_name
         self.__debug('Debug Mode... ')
@@ -62,7 +64,7 @@ class Virtual_Machine:
         self.__pipe_input = input
 
         self.__int_code = int_code
-        self.__int_code.extend([0] * 10000) # TODO resize
+        self.__int_code.extend([0] * 10000)  # TODO resize
         self.__is_running = True
         self.__pc = 0
         self.__last_pc = self.__pc
@@ -110,28 +112,28 @@ class Virtual_Machine:
         opcode = self.__int_code[self.__pc] % 100
         self.__debug('O({})'.format(opcode))
         return {
-            1  : self.__add,
-            2  : self.__multiple,
+            1: self.__add,
+            2: self.__multiple,
 
-            3  : self.__input,
-            4  : self.__print,
+            3: self.__input,
+            4: self.__print,
 
-            5  : self.__jmp_if_true,
-            6  : self.__jmp_if_false,
+            5: self.__jmp_if_true,
+            6: self.__jmp_if_false,
 
-            7  : self.__less_than,
-            8  : self.__equals,
-            
-            9  : self.__adjust_relative_base,
+            7: self.__less_than,
+            8: self.__equals,
 
-            99 : self.__exit
+            9: self.__adjust_relative_base,
+
+            99: self.__exit
         }[opcode]()
 
     def __add(self):
         arg1 = self.__read_arg()
         arg2 = self.__read_arg()
         self.__write_arg(arg1 + arg2)
-        return 1    
+        return 1
 
     def __multiple(self):
         arg1 = self.__read_arg()
@@ -141,7 +143,7 @@ class Virtual_Machine:
 
     def __input(self):
         val = 0
-        if self.__pipe_input: # Todo add lambda
+        if self.__pipe_input:  # Todo add lambda
             val = int(self.__pipe_input.pop())
         else:
             print('Pass value:', end='')
@@ -192,12 +194,10 @@ class Virtual_Machine:
         else:
             self.__write_arg(0)
         return 1
-        
-     
+
     def __adjust_relative_base(self):
         self.__relative_base += self.__read_arg()
         return 1
-
 
     def __exit(self):
         self.__is_running = False
@@ -209,13 +209,11 @@ class Virtual_Machine:
         if self.__pc >= len(self.__int_code):
             raise Exception('Segmentation fault')
 
-
         return {
-            0: lambda : self.__int_code[self.__int_code[self.__pc]],
-            1: lambda : self.__int_code[self.__pc],
-            2: lambda : self.__int_code[self.__int_code[self.__pc] + self.__relative_base]
+            0: lambda: self.__int_code[self.__int_code[self.__pc]],
+            1: lambda: self.__int_code[self.__pc],
+            2: lambda: self.__int_code[self.__int_code[self.__pc] + self.__relative_base]
         }[self.__arg_mode_stack.pop()]()
-        
 
     def __write_arg(self, val):
         self.__pc += 1
@@ -223,11 +221,10 @@ class Virtual_Machine:
             raise Exception('Segmentation fault')
 
         {
-            0 : lambda : setitem(self.__int_code, self.__int_code[self.__pc], val),
-            1 : lambda : setitem(self.__int_code, self.__pc, val),
-            2 : lambda : setitem(self.__int_code, self.__int_code[self.__pc] + self.__relative_base, val),
+            0: lambda: setitem(self.__int_code, self.__int_code[self.__pc], val),
+            1: lambda: setitem(self.__int_code, self.__pc, val),
+            2: lambda: setitem(self.__int_code, self.__int_code[self.__pc] + self.__relative_base, val),
         }[self.__arg_mode_stack.pop()]()
-            
 
     def __debug(self, message):
         if self.__debug_mode:
@@ -236,11 +233,14 @@ class Virtual_Machine:
 
 # TODO(HalfsInner): improve desing of this CB
 g_queue = []
+
+
 def cb_get(message, **args):
     print(message)
     g_queue.append(int(message))
 
-def parse_file(file_path : str):
+
+def parse_file(file_path: str):
     int_code = []
     with open(file_path, 'r') as f:
         for line in f:
@@ -248,32 +248,32 @@ def parse_file(file_path : str):
 
     return int_code
 
-def parse_file(file_path : str):
+
+def parse_file(file_path: str):
     int_code = []
     with open(file_path, 'r') as f:
         for line in f:
             int_code.extend(map(int, line.replace('\n', '').replace('\r', '').split(',')))
 
     return int_code
-    
 
-class SignalQueue: 
+
+class SignalQueue:
     g_move = False
     g_counter = 0
     g_max = 0
-    
+
     def __init__(self, queue=[], name=''):
         self.__queue = []
         self.__queue.extend(queue)
-        self.__name = name       
-    
+        self.__name = name
+
     def __call__(self, message, **args):
         print('{}'.format(message), end=' ')
         self.__queue.insert(0, int(message))
         SignalQueue.g_move = True
         SignalQueue.g_max = max(SignalQueue.g_max, int(message))
 
-        
     def get_queue(self):
         return self.__queue
 
@@ -283,9 +283,9 @@ def main(argv):
     vm = Virtual_Machine(parse_file(argv[1]), debug=True, output_callback=sq, machine_name='MySuperiorMachine')
     while vm.is_running():
         vm.step()
-        
+
     print('Max_output={}'.format(SignalQueue.g_max))
-        
+
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
