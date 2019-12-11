@@ -22,42 +22,40 @@ What is the sum of the fuel requirements for all of the modules on your spacecra
 '''
 
 import sys
-import numpy as np
 import pygame as pg
 
 from operator import setitem
 from re import findall
-from PIL import Image
-from matplotlib import cm
-
 
 class SantaSnower:
 
     def __init__(self, snow_flakes):
         self.__snow_flakes = snow_flakes.copy()
         self.__is_size_calculated = False
+        self.__elapsed_time = 0
 
     def elapse(self, delta_time=1):
         [setitem(self.__snow_flakes, idx, (
             (
                 ((el[0][0] + (el[1][0] * delta_time),
-                (el[0][1] + (el[1][1] * delta_time))),
-                (el[1][0], el[1][1]))
+                  (el[0][1] + (el[1][1] * delta_time))),
+                 (el[1][0], el[1][1]))
             )
         )) for idx, el in enumerate(self.__snow_flakes)]
+        self.__elapsed_time += delta_time
 
     @property
     def window_size(self):
         self.__calculate_required_size()
         return self.__len_x, self.__len_y
 
+    @property
+    def elapsed_time(self):
+        return self.__elapsed_time
+
     def print(self, background_representation='.', snow_representation='#'):
         self.__calculate_required_size()
-        empty_screen = [background_representation] * self.__len_x * self.__len_y
-        [setitem(empty_screen, (pos[0] - self.__min_x) + (pos[1] - self.__min_y) * self.__len_x, snow_representation)
-         for pos, _ in self.__snow_flakes]
-
-        return empty_screen
+        return (((pos[0] - self.__min_x), (pos[1] - self.__min_y)) for pos, _ in self.__snow_flakes)
 
     def __calculate_required_size(self):
         if self.__is_size_calculated:
@@ -83,7 +81,8 @@ class SantaSnower:
 def parse_file(file_path: str):
     coords_and_velocity = []
     with open(file_path, 'r') as f:
-        coords_and_velocity = [((int(pos_vel[0]), int(pos_vel[1])), (int(pos_vel[2]), int(pos_vel[3]))) for pos_vel in
+        coords_and_velocity = [((float(pos_vel[0]), float(pos_vel[1])), (float(pos_vel[2]), float(pos_vel[3]))) for
+                               pos_vel in
                                [line.replace('position=<', '')
                                     .replace('velocity=<', ',')
                                     .replace('>', '').replace('\r', '').replace('\n', '')
@@ -93,50 +92,64 @@ def parse_file(file_path: str):
     return coords_and_velocity
 
 
-def draw_on_screen(pixel_array, width, height):
-    pixel_int_array = [ord(char) for char in pixel_array]
-    data = np.array(pixel_int_array).reshape((width, height))
-
-    # data *= 1/127.
-    im = Image.fromarray(np.uint8(cm.gist_earth(data) * 255))
-    im.show()
-
-
 def main(argv):
     ss = SantaSnower(parse_file(argv[1]))
 
     background_colour = (255, 255, 255)
 
-    window_size_x, window_size_y = ss.window_size
-
-    expected_window_size = (800, 600)
+    expected_window_size = (1280, 720)
 
     screen = pg.display.set_mode(expected_window_size)
     pg.display.set_caption('AoC 2018 10_I')
-    screen.fill(background_colour)
-    pg.display.flip()
+    pg.font.init()
+    my_font = pg.font.SysFont('Comic Sans MS', 30)
+
+    ss.elapse(0)  # TOOD(HalfsInner): no 0 elapse cause shrinkt the output
+    ss.elapse(8000)  # TOOD(HalfsInner): no 0 elapse cause shrinkt the output
+
+    pg.key.set_repeat(1)
     running = True
-
-    ss.elapse(3)
-    printout = ss.print()
-
+    zoom_scalar = 30.
+    delta_time = 0
     while running:
+        screen.fill(background_colour)
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 running = False
+            if event.type == pg.KEYDOWN:
+                if event.key == pg.K_ESCAPE:
+                    running = False
+                if event.key == pg.K_SPACE:
+                    delta_time = 3
+                    pg.key.set_repeat(1)
+                if event.key == pg.K_SLASH:
+                    ss.elapse(-delta_time)
+                if event.key == pg.K_RETURN:
+                    delta_time = 0
+                    pg.key.set_repeat(100)
+                if event.key == pg.K_LEFT:
+                    ss.elapse(-1)
+                if event.key == pg.K_RIGHT:
+                    ss.elapse(1)
 
-        x_len, y_len = ss.window_size
-        [pg.draw.circle(screen, 123, (idx % x_len * 10, idx // x_len * 10), 5) for idx, el in enumerate(printout) if el == '#']
+        ss.elapse(delta_time)
+        map_idx_to_screen_x = lambda pos_x: (pos_x / ss.window_size[0]) * float(expected_window_size[0])
+        map_idx_to_screen_y = lambda pos_y: (pos_y / ss.window_size[1]) * float(expected_window_size[1])
+        map_idx_to_screen = lambda pos: (int(map_idx_to_screen_x(pos[0])), int(map_idx_to_screen_y(pos[1])))
+        zoom_screen = lambda p: (int(((p[0] - float(expected_window_size[0]) / 2.) * zoom_scalar)
+                                     + expected_window_size[0] / 2.),
+                                 int(((p[1] - float(expected_window_size[1]) / 2.) * zoom_scalar)
+                                     + expected_window_size[1] / 2.))
+
+        zoom_in_x = lambda x: (x - ss.window_size[0] / 2) * zoom_scalar + ss.window_size[0] / 2
+        zoom_in_y = lambda y: (y - ss.window_size[1] / 2) * zoom_scalar + ss.window_size[1] / 2
+
+        # [pg.draw.circle(screen, 255, zoom_screen(map_idx_to_screen(pos)), 4) for pos in ss.print()]
+        [pg.draw.circle(screen, 255, map_idx_to_screen((zoom_in_x(pos[0]), zoom_in_y(pos[1]))), 1) for pos in ss.print()]
+
+        textsurface = my_font.render('FRAME: {}'.format(ss.elapsed_time), False, (0, 0, 0))
+        screen.blit(textsurface, (0, 0))
         pg.display.flip()
-    sys.exit(-1)
-
-    for _ in range(1):
-        ss.elapse(3)
-        printout = ss.print()
-        [print(line) for line in findall('.' * printout_row_size, ''.join(printout))]
-        # draw_on_screen(printout, printout_row_size, printout_column_size)
-
-
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv))
