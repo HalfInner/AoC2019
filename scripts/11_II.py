@@ -280,9 +280,9 @@ class SignalQueue:
             print('{}:{}'.format(self.__name, message))
 
 
-class RouterTracker:
+class RouteTracker:
     BLACK = 0
-    WHITE = 0
+    WHITE = 1
     TURN_RIGHT = 1
     TURN_LEFT = 0
 
@@ -292,13 +292,19 @@ class RouterTracker:
         self.__panel_counter = 0
         self.__direction = 0
         self.__visited_pos = {}
-        self.__before_painting = RouterTracker.BLACK
         self.__after_painting = -1
         self.__idx = 1
 
     def __call__(self, operation=None, **args):
         if operation is None:
-            cur_color = RouterTracker.BLACK if self.__current_pos not in self.__visited_pos.keys() else self.__visited_pos[self.__current_pos]
+            cur_color = -1
+            if self.__visited_pos:
+                # 249
+                cur_color = RouteTracker.BLACK \
+                    if self.__current_pos not in self.__visited_pos.keys() else \
+                    self.__visited_pos[self.__current_pos]
+            else:
+                cur_color = RouteTracker.WHITE
             print('{}'.format(cur_color), end=' ')
             return cur_color
 
@@ -310,13 +316,34 @@ class RouterTracker:
     def panel_counter(self):
         return len(self.__visited_pos.keys())
 
+    def print(self):
+        min_x, max_x, min_y, max_y = 0, 0, 0, 0
+        for idx, position in enumerate(self.__visited_pos.keys()):
+            if idx == 0:
+                min_x, max_x, min_y, max_y = position[0], position[0], position[1], position[1]
+                continue
+            min_x = min(min_x, position[0])
+            max_x = max(max_x, position[0])
+            min_y = min(min_y, position[1])
+            max_y = max(max_y, position[1])
+        len_x = max_x - min_x + 1
+        len_y = max_y - min_y + 1
+
+        table = []
+        for idx in range(len_y):
+            table.append([' '] * len_x)
+        print(self.__visited_pos)
+        [setitem(table[(coord[1] - min_y)], (coord[0] - min_x), '#') for coord, color in self.__visited_pos.items() if color == RouteTracker.WHITE]
+        print(table)
+        print('\n'.join([''.join(row) for row in table]))
+
     def __painting_operation(self, color):
         self.__visited_pos[self.__current_pos] = color
 
     def __move_operation(self, direction):
-        if direction is RouterTracker.TURN_RIGHT:
+        if direction is RouteTracker.TURN_RIGHT:
             self.__direction += 1
-        elif direction is RouterTracker.TURN_LEFT:
+        elif direction is RouteTracker.TURN_LEFT:
             self.__direction += -1
         else:
             raise Exception('Not supported operation Op({})'.format(direction))
@@ -340,7 +367,7 @@ class RouterTracker:
 
 
 def main(argv):
-    rt = RouterTracker()
+    rt = RouteTracker()
     vm = VirtualMachine(parse_file(argv[1]), debug=False,
                         output_callback=rt, input_callback=rt,
                         machine_name='Robot')
@@ -348,7 +375,7 @@ def main(argv):
     # for _ in range(40):
     while vm.is_running():
         vm.step()
-
+    rt.print()
     print('Max_output={}'.format(rt.panel_counter))
 
 
