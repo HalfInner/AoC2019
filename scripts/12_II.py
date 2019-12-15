@@ -179,6 +179,8 @@ What is the total energy in the system after simulating the moons given in your 
 '''
 
 import sys
+import numpy as np
+from matplotlib import pyplot as plt
 
 from copy import deepcopy
 from itertools import permutations
@@ -191,11 +193,49 @@ class Universe:
         self.__planets_coords = deepcopy(planets_coords)
         self.__planets_velocity = [(0, 0, 0)] * len(self.__planets_coords)
 
+        self.__initial_planets_coords = deepcopy(self.__planets_coords)
+        self.__initial_planets_velocity = [(0, 0, 0)] * len(self.__planets_coords)
+
+        self.__x_repeated = -1
+        self.__y_repeated = -1
+        self.__z_repeated = -1
+
         self.__elapsed_time = 0
 
     def elapse(self, delta_time=1):
+        self.__calculate_velocity()
+        self.__move(delta_time)
+        self.__elapsed_time += delta_time
+
+        pos_packed = zip(self.__initial_planets_coords, self.__planets_coords)
+        vel_packed = zip(self.__initial_planets_velocity, self.__planets_velocity)
+        are_repeated = [(x == x0, y == y0, z == z0) for (x0, y0, z0), (x, y, z) in pos_packed]
+        are_v_repeated = [(x == x0, y == y0, z == z0) for (x0, y0, z0), (x, y, z) in vel_packed]
+
+        is_x_repeated, is_vx_repeated = all([x for x, _, _ in are_repeated]), all([x for x, _, _ in are_v_repeated])
+        is_y_repeated, is_vy_repeated = all([y for _, y, _ in are_repeated]), all([y for _, y, _ in are_v_repeated])
+        is_z_repeated, is_vz_repeated = all([z for _, _, z in are_repeated]), all([z for _, _, z in are_v_repeated])
+
+        if is_x_repeated and is_vx_repeated and self.__x_repeated < 0:
+            self.__x_repeated = self.elapsed_time
+            print('X were repeated in ', self.elapsed_time)
+
+        if is_y_repeated and is_vy_repeated and self.__y_repeated < 0:
+            self.__y_repeated = self.elapsed_time
+            print('Y were repeated in ', self.elapsed_time)
+
+        if is_z_repeated and is_vz_repeated and self.__z_repeated < 0:
+            self.__z_repeated = self.elapsed_time
+            print('Z were repeated in ', self.elapsed_time)
+
+        if self.__x_repeated > 0 and self.__y_repeated > 0 and self.__z_repeated > 0:
+            print('Current time: ', self.elapsed_time)
+            print('Time repeat: ', self.__nww(self.__x_repeated, self.__nww(self.__y_repeated, self.__z_repeated)))
+            sys.exit(0)
+
+    def __calculate_velocity(self, until_repeat=False):
         velocitator = lambda a, b: 1 if a < b else -1 if a > b else 0
-        for (a_idx, b_idx) in permutations(range(len(deepcopy(self.__planets_coords))), 2):
+        for (a_idx, b_idx) in permutations(range(len(self.__planets_coords)), 2):
             self.__planets_velocity[a_idx] = (
                 self.__planets_velocity[a_idx][0] + velocitator(
                     self.__planets_coords[a_idx][0], self.__planets_coords[b_idx][0]),
@@ -204,8 +244,6 @@ class Universe:
                 self.__planets_velocity[a_idx][2] + velocitator(
                     self.__planets_coords[a_idx][2], self.__planets_coords[b_idx][2]),
             )
-        self.__move(delta_time)
-        self.__elapsed_time += delta_time
 
     def __move(self, delta_time):
         [setitem(self.__planets_coords, idx, (
@@ -218,6 +256,16 @@ class Universe:
             )
         )) for idx, (coords, vel) in enumerate(zip(self.__planets_coords, self.__planets_velocity))]
 
+    def __nwd(self, a, b):
+        while b != 0:
+            c = a % b
+            a = b
+            b = c
+        return a
+
+    def __nww(self, a, b):
+        return a * b // self.__nwd(a, b)
+
     @property
     def total_energy(self):
         total_energy = 0
@@ -225,6 +273,13 @@ class Universe:
             total_energy += (abs(coord[0]) + abs(coord[1]) + abs(coord[2])) * (abs(vel[0]) + abs(vel[1]) + abs(vel[2]))
         return total_energy
 
+    @property
+    def universe_repeated_itself(self):
+        if self.__elapsed_time is 0:
+            return False
+        is_coords_same = all(a == b for (a, b) in zip(self.__initial_planets_coords, self.__planets_coords))
+        is_velocity_same = all(a == b for (a, b) in zip(self.__initial_planets_velocity, self.__planets_velocity))
+        return is_coords_same and is_velocity_same
 
     @property
     def elapsed_time(self):
@@ -248,9 +303,11 @@ def parse_file(file_path: str):
 
 def main(argv):
     ss = Universe(parse_file(argv[1]))
-    for _ in range(1000):
+
+    while True:
         ss.elapse()
-    print(ss.total_energy)
+
+    print('Elapsed Time: ', ss.elapsed_time)
 
 
 if __name__ == "__main__":
