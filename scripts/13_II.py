@@ -1,73 +1,51 @@
 '''
---- Day 11: Space Police ---
-On the way to Jupiter, you're pulled over by the Space Police.
+--- Day 13: Care Package ---
+As you ponder the solitude of space and the ever-increasing three-hour roundtrip for messages between you and Earth, you notice that the Space Mail Indicator Light is blinking. To help keep you sane, the Elves have sent you a care package.
 
-"Attention, unmarked spacecraft! You are in violation of Space Law! All spacecraft must have a clearly visible registration identifier! You have 24 hours to comply or be sent to Space Jail!"
+It's a new game for the ship's arcade cabinet! Unfortunately, the arcade is all the way on the other end of the ship. Surely, it won't be hard to build your own - the care package even comes with schematics.
 
-Not wanting to be sent to Space Jail, you radio back to the Elves on Earth for help. Although it takes almost three hours for their reply signal to reach you, they send instructions for how to power up the emergency hull painting robot and even provide a small Intcode program (your puzzle input) that will cause it to paint your ship appropriately.
+The arcade cabinet runs Intcode software like the game the Elves sent (your puzzle input). It has a primitive screen capable of drawing square tiles on a grid. The software draws tiles to the screen with output instructions: every three output instructions specify the x position (distance from the left), y position (distance from the top), and tile id. The tile id is interpreted as follows:
 
-There's just one problem: you don't have an emergency hull painting robot.
+0 is an empty tile. No game object appears in this tile.
+1 is a wall tile. Walls are indestructible barriers.
+2 is a block tile. Blocks can be broken by the ball.
+3 is a horizontal paddle tile. The paddle is indestructible.
+4 is a ball tile. The ball moves diagonally and bounces off objects.
+For example, a sequence of output values like 1,2,3,6,5,4 would draw a horizontal paddle tile (1 tile from the left and 2 tiles from the top) and a ball tile (6 tiles from the left and 5 tiles from the top).
 
-You'll need to build a new emergency hull painting robot. The robot needs to be able to move around on the grid of square panels on the side of your ship, detect the color of its current panel, and paint its current panel black or white. (All of the panels are currently black.)
+Start the game. How many block tiles are on the screen when the game exits?
 
-The Intcode program will serve as the brain of the robot. The program uses input instructions to access the robot's camera: provide 0 if the robot is over a black panel or 1 if the robot is over a white panel. Then, the program will output two values:
+Your puzzle answer was 361.
 
-First, it will output a value indicating the color to paint the panel the robot is over: 0 means to paint the panel black, and 1 means to paint the panel white.
-Second, it will output a value indicating the direction the robot should turn: 0 means it should turn left 90 degrees, and 1 means it should turn right 90 degrees.
-After the robot turns, it should always move forward exactly one panel. The robot starts facing up.
+The first half of this puzzle is complete! It provides one gold star: *
 
-The robot will continue running for a while like this and halt when it is finished drawing. Do not restart the Intcode computer inside the robot during this process.
+--- Part Two ---
+The game didn't run because you didn't put in any quarters. Unfortunately, you did not bring any quarters. Memory address 0 represents the number of quarters that have been inserted; set it to 2 to play for free.
 
-For example, suppose the robot is about to start running. Drawing black panels as ., white panels as #, and the robot pointing the direction it is facing (< ^ > v), the initial state and region near the robot looks like this:
+The arcade cabinet has a joystick that can move left and right. The software reads the position of the joystick with input instructions:
 
-.....
-.....
-..^..
-.....
-.....
-The panel under the robot (not visible here because a ^ is shown instead) is also black, and so any input instructions at this point should be provided 0. Suppose the robot eventually outputs 1 (paint white) and then 0 (turn left). After taking these actions and moving forward one panel, the region now looks like this:
+If the joystick is in the neutral position, provide 0.
+If the joystick is tilted to the left, provide -1.
+If the joystick is tilted to the right, provide 1.
+The arcade cabinet also has a segment display capable of showing a single number that represents the player's current score. When three output instructions specify X=-1, Y=0, the third output instruction is not a tile; the value instead specifies the new score to show in the segment display. For example, a sequence of output values like -1,0,12345 would show 12345 as the player's current score.
 
-.....
-.....
-.<#..
-.....
-.....
-Input instructions should still be provided 0. Next, the robot might output 0 (paint black) and then 0 (turn left):
-
-.....
-.....
-..#..
-.v...
-.....
-After more outputs (1,0, 1,0):
-
-.....
-.....
-..^..
-.##..
-.....
-The robot is now back where it started, but because it is now on a white panel, input instructions should be provided 1. After several more outputs (0,1, 1,0, 1,0), the area looks like this:
-
-.....
-..<#.
-...#.
-.##..
-.....
-Before you deploy the robot, you should probably have an estimate of the area it will cover: specifically, you need to know the number of panels it paints at least once, regardless of color. In the example above, the robot painted 6 panels at least once. (It painted its starting panel twice, but that panel is still only counted once; it also never painted the panel it ended on.)
-
-Build a new emergency hull painting robot and run the Intcode program on it. How many panels does it paint at least once?
+Beat the game by breaking all the blocks. What is your score after the last block is broken?
 '''
 
 import sys
+import os
+
 from collections import deque
-from itertools import permutations, cycle
 from operator import setitem
 
 
 class VirtualMachine:
 
-    def __init__(self, int_code, program_alarm=False, noun=12, verb=2, debug=False, output_callback=print,
-                 input_callback=lambda: input,
+    def __init__(self,
+                 int_code,
+                 program_alarm=False,
+                 noun=12, verb=2, quarters=None, debug=False,
+                 output_callback=lambda: print, input_callback=lambda: input,
                  machine_name=''):
         self.__debug_mode = debug
         self.__machine_name = machine_name
@@ -84,6 +62,9 @@ class VirtualMachine:
         self.__relative_base = self.__pc
         self.__step_counter = 0
         self.__arg_mode_stack = deque()
+        if quarters is not None:
+            self.__int_code[0] = quarters
+
         if program_alarm:
             self.__int_code[1] = noun
             self.__int_code[2] = verb
@@ -104,6 +85,7 @@ class VirtualMachine:
         return self.__int_code[first_pos]
 
     def print_debug_info(self):
+        self.__debug_mode = True
         self.__debug('  IntCode: \n{}'.format(self.__int_code))
         self.__debug('Is Running {}'.format(self.__is_running))
         self.__debug('        PC {}'.format(self.__pc))
@@ -111,6 +93,7 @@ class VirtualMachine:
         self.__debug('  relative {}'.format(self.__relative_base))
         self.__debug('     Steps {}'.format(self.__step_counter))
         self.__debug(' arg modes {}'.format(self.__arg_mode_stack))
+        self.__debug_mode = False
 
     def __operate(self):
         self.__arg_mode_stack.clear()
@@ -259,44 +242,81 @@ class CarePackager:
 
     def __init__(self):
         self.__current_pos = (0, 0)
-        self.__current_commnad_number = 0
+        self.__current_command_number = 0
         self.__x_tile = -1
         self.__y_tile = -1
         self.__id_tile = -1
+        self.__x_ball = 0
+        self.__score = 0
         self.__board_elements = {}
+        self.__print_queue = deque()
+        self.__board_size = (-1, -1)
+        self.__board_ready = False
+        self.__printable_board = []
 
     def __call__(self, operation=None, **args):
         if operation is None:
-            print('Read{}'.format(None), end=' ')
-            return None
+            self.__board_ready = True
+            return self.__x_ball - self.__x_paddle
 
-        if (self.__current_commnad_number % 3) == CarePackager.Parameter_1st:
+        if (self.__current_command_number % 3) == CarePackager.Parameter_1st:
             self.__x_tile = operation
-        elif (self.__current_commnad_number % 3) == CarePackager.Parameter_2nd:
+        elif (self.__current_command_number % 3) == CarePackager.Parameter_2nd:
             self.__y_tile = operation
-        elif (self.__current_commnad_number % 3) == CarePackager.Parameter_3rd:
+        elif (self.__current_command_number % 3) == CarePackager.Parameter_3rd:
             self.__id_tile = operation
             self.__draw()
         else:
             raise Exception('Command number is not used')
-        self.__current_commnad_number += 1
+        self.__current_command_number += 1
 
     def print(self):
+        if not self.__board_ready:
+            return [['']]
+
         self.__normalize_board()
+        # [setitem(self.__printable_board[pos[1]], pos[0], self.__tile(tile)) for pos, tile in self.__board_elements.items()]
+        [setitem(self.__printable_board[y], x, self.__tile(tile)) for x, y, tile in self.__print_queue]
+
+        return self.__printable_board
+
+    def score(self):
+        return self.__score
 
     def count_printable_blocks(self):
         return len([el_id for key, el_id in self.__board_elements.items() if el_id == CarePackager.BLOCK_TILE])
 
+    def is_ready(self):
+        return self.__board_ready
+
     def __normalize_board(self):
+        if not self.__board_size == (-1, -1):
+            return
+
         x_max = -1
         y_max = -1
         for x, y in self.__board_elements.keys():
-            x_max = max(x_max, x)
-            y_max = max(y_max, y)
+            x_max = max(x_max, x + 1)
+            y_max = max(y_max, y + 1)
+
+        self.__board_size = (x_max, y_max)
+        [self.__printable_board.append([' '] * self.__board_size[0]) for _ in range(self.__board_size[1])]
+        print('Board size', self.__board_size)
 
     def __draw(self):
-        print('({};{})={}'.format(self.__x_tile, self.__y_tile, self.__id_tile))
+        if self.__x_tile == -1:
+            self.__score = self.__id_tile
+            return
+
+        if self.__id_tile == CarePackager.BLOCK_BALL:
+            self.__x_ball = self.__x_tile
+
+        if self.__id_tile == CarePackager.BLOCK_PADDLE:
+            self.__x_paddle = self.__x_tile
+
         self.__board_elements[(self.__x_tile, self.__y_tile)] = self.__id_tile
+        self.__print_queue.append((self.__x_tile, self.__y_tile, self.__id_tile))
+
 
     def __tile(self, el_id):
         return {
@@ -310,14 +330,30 @@ class CarePackager:
 
 def main(argv):
     cp = CarePackager()
-    vm = VirtualMachine(parse_file(argv[1]), quarters debug=False,
+    vm = VirtualMachine(parse_file(argv[1]), quarters=2, debug=False,
                         output_callback=cp, input_callback=cp,
                         machine_name='Robot')
 
+    print('Loading...')
+    is_started_info_printed = True
     while vm.is_running():
-        vm.step()
+        try:
+            vm.step()
+            # os.system('cls')
+
+            if cp.is_ready():
+                if is_started_info_printed:
+                    print('Game started...')
+                    is_started_info_printed = False
+                # os.system('CLS')
+                # print('\n'.join([''.join(line) for line in cp.print()]))
+                # print('Score: ', cp.score())
+        except Exception as e:
+            vm.print_debug_info()
+            raise e
 
     print('Printable blocks left: ', cp.count_printable_blocks())
+    print('Score: ', cp.score())
 
 
 if __name__ == "__main__":
